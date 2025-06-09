@@ -33,22 +33,27 @@ def sqlQuery(query: str) -> pd.DataFrame:
             return cursor.fetchall_arrow().to_pandas()
         
 @tool
-def get_wheel_chair_accessibility(city: str) -> str:
+def get_wheel_chair_accessibility(city: str, accessibility: str, business_category: str) -> str:
     """
-    Searches the Nimble Google Maps dataset for a given city and a search term.
-    Returns: up to 10 matching places as JSON.
+    Searches the Nimble Google Maps dataset for places in the specified city that match the given accessibility feature and business category.
+    The agent should provide the city name, specify 'wheelchair' or related accessibility terms for the accessibility parameter,
+    and specify the type of business (e.g., restaurant, hotel) for the business_category parameter.
+    Returns: up to 5 matching places as JSON.
     """
     query = f"""
     SELECT *
     FROM `dais-hackathon-2025`.nimble.dbx_google_maps_search_daily
-    WHERE city = 'San Francisco'
+    WHERE city = '{city}'
       AND exists(
         accessibility,
-        a -> a.display_name ILIKE '%wheelchair%'
+        a -> a.display_name ILIKE '%{accessibility}%'
+      )
+      AND exists(
+        business_category_ids,
+        category -> category ILIKE '%{business_category}%'
       )
     LIMIT 5;
     """
-    print(f"Executing query: {query}")  # debug
     df = sqlQuery(query)
     return df.to_dict(orient="records")
 

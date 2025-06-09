@@ -6,6 +6,7 @@ import io
 import base64
 import re
 import json
+import ast
 from databricks import sql
 from databricks.sdk import WorkspaceClient
 from langchain_core.messages import AIMessage, HumanMessage
@@ -15,16 +16,16 @@ from st_callable_util import get_streamlit_cb
 
 w = WorkspaceClient()
 
-w = WorkspaceClient()
 st.set_page_config(layout="wide")
 
 st.title("AccessCity")
 
-df = pd.DataFrame(
+# Show random map for demo purposes
+random_df = pd.DataFrame(
     np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
     columns=["lat", "lon"],
 )
-st.map(df)
+st.map(random_df)
 
 # Chat state initialization
 if "expander_open" not in st.session_state:
@@ -50,33 +51,62 @@ if prompt:
     st.chat_message("user").write(prompt)
 
     with st.chat_message("assistant"):
-        # — grab user’s token/email from Databricks Apps headers —
         user_token = st.context.headers.get("X-Forwarded-Access-Token")
         user_email = st.context.headers.get("X-Forwarded-Email")
 
-        # Print to stdout
-        print(f"[Debug] User Token: {user_token} this message get's messed up and redacted idk")
         print(f"[Debug] User Email: {user_email}")
 
-        # invoke the graph…
         st_callback = get_streamlit_cb(st.container())
         response = invoke_our_graph(st.session_state.messages, [st_callback])
 
-        # DEBUG—console
-        print("Full invoke response:", repr(response))
+        print("[Debug] Full invoke response:", repr(response))
 
-        # Append the model’s final AIMessage (so the UI still shows it)
         last = response["messages"][-1].content
         st.session_state.messages.append(AIMessage(content=last))
-        print("Extracted last content:", repr(last))
+        print("[Debug] Extracted last content:", repr(last))
 
-        # find the first message whose content is valid JSON list-of-dicts
-        records = None
+        # Try to extract valid Python list of dicts
+        raw = None
         for msg in response["messages"]:
+            if hasattr(msg, "content") and "array(" in msg.content:
+                raw = msg.content
+                break
+        if raw is None:
+            st.error("No records found")
+            print("[Debug] No raw output containing array()")
+        else:
+            # Clean numpy arrays and datetime objects for parsing
+            cleaned = re.sub(
+                r"array\(\s*(\[[\s\S]*?\])\s*,\s*dtype=object\s*\)",
+                r"\1",
+                raw,
+                flags=re.DOTALL
+            )
+            cleaned = re.sub(
+                r"datetime\.date\(\s*(\d{4})\s*,\s*(\d{1,2})\s*,\s*(\d{1,2})\s*\)",
+                r"'\1-\2-\3'",
+                cleaned
+            )
             try:
-                payload = json.loads(msg.content)
-                if isinstance(payload, list) and payload and isinstance(payload[0], dict):
-                    records = payload
-                    break
-            except Exception:
-                continue
+                records = ast.literal_eval(cleaned)
+                print("[Debug] Parsed records:", records[:1])
+            except Exception as e:
+                records = None
+                st.error(f"Failed to parse cleaned output: {e}")
+                print("[Error] Failed to parse cleaned output:", e)
+                print(cleaned)
+
+        if records:
+            try:
+                df_places = pd.json_normalize(records)
+                df_places["latitude"] = df_places["latitude"].astype(float)
+                df_places["longitude"] = df_places["longitude"].astype(float)
+                df_map = df_places.rename(columns={"latitude": "lat", "longitude": "lon"})
+
+                col1, col2 = st.columns([1, 3])
+                with col1:
+                    st.markdown("### Returned Locations")
+                    st.map(df_map)
+            except Exception as e:
+                st.error(f"Error displaying map: {e}")
+                print("[Error] Failed to display map:", e)
