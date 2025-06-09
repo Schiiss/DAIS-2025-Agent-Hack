@@ -10,7 +10,7 @@ Cities are filled with incredible places to explore, but for many people with di
 
 AccessCity enables users to query accessibility-focused information about venues (restaurants, cafes, events, etc.) using natural language. For example:
 
-> "Get me wheelchair accessible resturants in San Francisco"
+> "Get me wheelchair accessible restaurants in San Francisco"
 
 The app uses generative AI to interpret the user's intent and translate it into structured queries against a curated dataset of local businesses and amenities. It surfaces results tailored to a user's specific accessibility needs helping them save time and avoid uncertainty.
 
