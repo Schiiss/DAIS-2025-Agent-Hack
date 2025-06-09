@@ -12,8 +12,9 @@ from langchain.tools import tool as deprecated_tool  # If you're using both vers
 from langgraph.graph import START, StateGraph
 from langgraph.graph.message import AnyMessage, add_messages
 from langgraph.prebuilt import ToolNode
-from databricks_langchain import ChatDatabricks
-
+from langchain_openai import AzureChatOpenAI
+openai_key = os.getenv('SECRET_KEY')
+openai_model = os.getenv('SECRET_MODEL')
 from typing import Annotated, TypedDict, Literal
 
 def sqlQuery(query: str) -> pd.DataFrame:
@@ -73,7 +74,14 @@ def should_continue(state: GraphsState) -> Literal["tools", "__end__"]:
 # Core invocation of the model
 def _call_model(state: GraphsState):
     messages = state["messages"]
-    llm = ChatDatabricks(endpoint="databricks-meta-llama-3-3-70b-instruct").bind_tools(tools)
+    llm = AzureChatOpenAI(
+        temperature=0,
+        streaming=True,
+        deployment_name=openai_model,
+        api_version="2025-01-01-preview",
+        api_key=openai_key,
+        azure_endpoint="https://northcentralus.api.cognitive.microsoft.com/"
+    ).bind_tools(tools, parallel_tool_calls=False)
     response = llm.invoke(messages)
     return {"messages": [response]}  # add the response to the messages using LangGraph reducer paradigm
 
@@ -89,6 +97,7 @@ graph.add_conditional_edges(
 )
 graph.add_edge("tools", "modelNode")
 
+# Compile the state graph into a runnable object
 graph_runnable = graph.compile()
 def invoke_our_graph(st_messages, callables):
     if not isinstance(callables, list):

@@ -3,3 +3,13 @@ command: [
   "run",
   "app.py"
 ]
+
+env:
+  - name: STREAMLIT_BROWSER_GATHER_USAGE_STATS
+    value: "false"
+  - name: "SERVING_ENDPOINT"
+    valueFrom: "serving-endpoint"
+  - name: 'SECRET_KEY'
+    valueFrom: 'secret'
+  - name: 'SECRET_MODEL'
+    valueFrom: 'secret-2'
