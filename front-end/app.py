@@ -20,27 +20,37 @@ st.set_page_config(layout="wide")
 
 # Title
 st.title("AccessCity")
+# --- Demo map using pydeck instead of st.map (single point @ Moscone Center) ---
+import pandas as pd
+import pydeck as pdk
 
-# -- Demo map using pydeck instead of st.map --
-random_df = pd.DataFrame(
-    np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
-    columns=["lat", "lon"],
+# Coordinates for Moscone Center, San Francisco
+moscone_df = pd.DataFrame(
+    {
+        "latitude":  [37.7831],
+        "longitude": [-122.4009],
+        "size":      [100],   # radius in meters; tweak if you like
+    }
 )
-# prepare for pydeck
-random_df = random_df.rename(columns={"lat": "latitude", "lon": "longitude"})
-random_df["size"] = 100  # fixed radius for demo
 
 demo_layer = pdk.Layer(
     "ScatterplotLayer",
-    data=random_df,
+    data=moscone_df,
     pickable=True,
     auto_highlight=True,
     get_position=["longitude", "latitude"],
     get_radius="size",
     get_fill_color=[200, 30, 0, 160],
 )
-demo_view = pdk.ViewState(latitude=37.76, longitude=-122.4, zoom=10, pitch=50)
-demo_tooltip = {"text": "Lat: {latitude}\nLon: {longitude}"}
+
+demo_view = pdk.ViewState(
+    latitude=moscone_df["latitude"][0],
+    longitude=moscone_df["longitude"][0],
+    zoom=13,     # a little closer than before
+    pitch=50,
+)
+
+demo_tooltip = {"text": "Moscone Center\nLat: {latitude}\nLon: {longitude}"}
 
 demo_deck = pdk.Deck(
     layers=[demo_layer],
