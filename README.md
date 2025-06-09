@@ -14,6 +14,16 @@ AccessCity enables users to query accessibility-focused information about venues
 
 The app uses generative AI to interpret the user's intent and translate it into structured queries against a curated dataset of local businesses and amenities. It surfaces results tailored to a user's specific accessibility needs helping them save time and avoid uncertainty.
 
+Following the above example, here is what the app will display after sending through the above query.
+
+In the below screenshot we can see the agent provides full transparency into the tool called and the parameters used.
+
+![image](./assets/image_1.png)
+
+At the very end of the response, the app displays the location of the given resturant, cafe, etc. on the map by using the coordinates.
+
+![image](./assets/image_2.png)
+
 ## How we built it
 
 We used the following technologies and tools:
